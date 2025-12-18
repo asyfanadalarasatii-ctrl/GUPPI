@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GUPPI BERSUARA</title>
+<style>
+:root{
+  --primary:#1e3c72;
+  --bg:#f2f4f8;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:var(--bg);}
+
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.wrapper{padding:40px 16px}
+.container{max-width:420px;margin:auto;background:#fff;padding:26px;border-radius:20px;box-shadow:0 12px 30px rgba(0,0,0,.12);animation:fadeUp .6s ease;}
+h1{text-align:center;color:var(--primary)}
+.subtitle{text-align:center;font-size:14px;color:#444;margin-bottom:22px;line-height:1.5}
+label{font-weight:bold;color:var(--primary);display:block;margin-bottom:6px}
+input,select,textarea{width:100%;padding:12px;margin-bottom:16px;border-radius:12px;border:1px solid #ccc;font-size:14px}
+textarea{resize:none}
+input[readonly]{background:#f0f4ff;font-weight:bold;text-align:center}
+button{width:100%;padding:13px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:15px;cursor:pointer;transition:.2s}
+button:hover{opacity:.9;transform:scale(.98)}
+button.secondary{background:#e0e0e0;color:#333;margin-top:8px}
+.hidden{display:none}
+.response-box{background:#f3f6ff;padding:14px;border-radius:14px;margin-top:14px;font-size:14px;animation:fadeUp .4s ease;}
+.success{background:#e6f0ff;border-left:5px solid var(--primary);padding:14px;border-radius:12px;font-size:13px;margin-top:14px;animation:fadeUp .4s ease;}
+.note{text-align:center;font-size:12px;color:#666;margin-top:16px;}
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+<div class="container">
+
+<h1>GUPPI BERSUARA</h1>
+<div class="subtitle">
+<b>Don’t keep it to yourself. Your voice matters!</b><br>
+Ruang aman bagi siswa untuk menyampaikan aspirasi dan cerita.
+</div>
+
+<div id="siswa">
+<label>Kode Pesan</label>
+<input type="text" id="kodePesan" readonly>
+
+<label>Jenis</label>
+<select id="jenis">
+<option value="">-- Pilih --</option>
+<option>Saran</option>
+<option>Kritik</option>
+<option>Ruang Bercerita</option>
+</select>
+
+<label>Kategori</label>
+<select id="kategori">
+<option value="">-- Pilih --</option>
+<option>Fasilitas</option>
+<option>Guru</option>
+<option>OSIM</option>
+<option>Kurikulum</option>
+<option>Lainnya</option>
+</select>
+
+<label>Isi Pesan</label>
+<textarea id="isi" rows="5"></textarea>
+
+<button onclick="kirimPesan()">Kirim Pesan</button>
+<div id="notif" class="hidden"></div>
+
+<button class="secondary" onclick="show('cek')">Lihat Tanggapan</button>
+<button class="secondary" onclick="show('login')">Login Admin OSIM</button>
+</div>
+
+<div id="cek" class="hidden">
+<label>Masukkan Kode Pesan</label>
+<input type="text" id="cekKode">
+<button onclick="cekTanggapan()">Cek</button>
+<div id="hasil" class="response-box hidden"></div>
+<button class="secondary" onclick="show('siswa')">Kembali</button>
+</div>
+
+<div id="login" class="hidden">
+<label>Password Admin</label>
+<input type="password" id="adminPass">
+<button onclick="loginAdmin()">Login</button>
+<button class="secondary" onclick="show('siswa')">Kembali</button>
+</div>
+
+<div id="admin" class="hidden">
+<label>Kode Pesan</label>
+<input type="text" id="adminKode">
+<label>Balasan OSIM</label>
+<textarea id="adminBalasan" rows="4"></textarea>
+<button onclick="simpanBalasan()">Simpan Balasan</button>
+<h3 style="color:var(--primary)">Daftar Pesan Masuk</h3>
+<div id="listPesan"></div>
+<button class="secondary" onclick="show('siswa')">Logout</button>
+</div>
+
+<div class="note">Identitas pengirim tidak direkam.</div>
+</div>
+</div>
+
+<script>
+/* ===== TEMA OTOMATIS ===== */
+const themes=[
+{c:"#1e3c72",b:"#f2f4f8"},
+{c:"#b91c1c",b:"#fff5f5"},
+{c:"#6b21a8",b:"#f6f0ff"},
+{c:"#166534",b:"#f0fff4"},
+{c:"#ca8a04",b:"#fffbeb"},
+{c:"#be185d",b:"#fff1f6"},
+{c:"#78350f",b:"#fef3c7"},
+{c:"#c2410c",b:"#fff7ed"}
+];
+const t=themes[Math.floor(Math.random()*themes.length)];
+document.documentElement.style.setProperty('--primary',t.c);
+document.documentElement.style.setProperty('--bg',t.b);
+
+/* ===== KODE PESAN ===== */
+let kode="GB-"+Math.random().toString(36).substring(2,7).toUpperCase();
+document.getElementById("kodePesan").value=kode;
+
+/* ===== DATA ===== */
+const adminPassword="guppi2025";
+
+function show(id){
+["siswa","cek","login","admin"].forEach(x=>document.getElementById(x).classList.add("hidden"));
+document.getElementById(id).classList.remove("hidden");
+if(id==="admin") fetchPesanAdmin();
+}
+
+async function kirimPesan(){
+  const jenis = document.getElementById("jenis").value;
+  const kategori = document.getElementById("kategori").value;
+  const isi = document.getElementById("isi").value;
+  const notif = document.getElementById("notif");
+
+  if(!jenis || !kategori || !isi){
+    alert("Lengkapi semua data");
+    return;
+  }
+
+  // Kirim ke Netlify Function
+  try{
+    const res = await fetch('/.netlify/functions/submitMessage', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({kode, jenis, kategori, isi})
+    });
+    if(res.ok){
+      notif.innerHTML=`<b>Terima kasih sudah bersuara 🤍</b><br>
+      Simpan kode ini untuk melihat tanggapan:<br>
+      <b>${kode}</b>`;
+      notif.classList.remove("hidden");
+      notif.classList.add("success");
+      // reset form
+      kode = "GB-"+Math.random().toString(36).substring(2,7).toUpperCase();
+      document.getElementById("kodePesan").value=kode;
+      document.getElementById("isi").value="";
+    }else{
+      alert("Gagal mengirim pesan, coba lagi.");
+    }
+  }catch(e){alert("Error mengirim pesan: "+e);}
+}
+
+/* ===== ADMIN ===== */
+async function fetchPesanAdmin(){
+  try{
+    const res = await fetch('/.netlify/functions/getMessages');
+    const data = await res.json();
+    const list = document.getElementById("listPesan");
+    list.innerHTML="";
+    if(data.length===0){
+      list.innerHTML="<p style='font-size:13px;color:#666'>Belum ada pesan masuk.</p>";
+      return;
+    }
+    data.forEach(p=>{
+      list.innerHTML+=`
+      <div class="response-box">
+      <b>${p.kode}</b><br>
+      Jenis: ${p.jenis}<br>
+      Kategori: ${p.kategori}<br>
+      <p>${p.isi}</p>
+      <p><b>Balasan:</b> ${p.balasan||"-"}</p>
+      </div>`;
+    });
+  }catch(e){console.log(e);}
+}
+
+async function simpanBalasan(){
+  const k=document.getElementById("adminKode").value.toUpperCase();
+  const b=document.getElementById("adminBalasan").value;
+  try{
+    await fetch('/.netlify/functions/replyMessage', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({kode:k, balasan:b})
+    });
+    alert("Balasan tersimpan");
+  }catch(e){alert("Gagal menyimpan balasan: "+e);}
+}
+
+function loginAdmin(){
+  if(document.getElementById("adminPass").value===adminPassword) show("admin");
+  else alert("Password salah");
+}
+
+async function cekTanggapan(){
+  const k=document.getElementById("cekKode").value.toUpperCase();
+  try{
+    const res = await fetch('/.netlify/functions/getMessages');
+    const data = await res.json();
+    const h=document.getElementById("hasil");
+    const msg=data.find(x=>x.kode===k);
+    h.innerText=msg?msg.balasan||"Belum ada tanggapan":"Kode tidak ditemukan";
+    h.classList.remove("hidden");
+  }catch(e){alert("Error: "+e);}
+}
+</script>
+</body>
+</html>
